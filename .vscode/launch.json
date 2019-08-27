@@ -5,6 +5,14 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "type": "lldb",
+      "request": "launch",
+      "name": "(OSX) Launch",
+      "program": "${workspaceFolder}/target/debug/shelly",
+      "cwd": "${workspaceFolder}",
+      "args": []
+    },
+    {
       "name": "(Windows) Launch",
       "type": "cppvsdbg",
       "request": "launch",
