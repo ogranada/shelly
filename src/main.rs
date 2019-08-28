@@ -1,4 +1,3 @@
-use std::io::{stdin, stdout, Write};
 use std::process::{Command};
 use std::process::{exit};
 
@@ -11,8 +10,13 @@ use std::fs;
 
 // NON STANDARD
 extern crate prettytable;
+extern crate rustyline;
 
 use prettytable::{Table, Row, Cell, Attr, color};
+
+use rustyline::error::ReadlineError;
+use rustyline::Editor;
+
 
 
 #[derive(Debug)]
@@ -84,8 +88,14 @@ fn show_directory_info(directory: &Path) -> EAction {
     EAction::NONE
 }
 
-fn list_directory() -> EAction {
-    show_directory_info(Path::new("."));
+fn list_directory(params: Vec<&str>) -> EAction {
+    if params.len() == 0 {
+        show_directory_info(Path::new("."));
+    } else {
+        for pth in params {
+            show_directory_info(Path::new(pth));
+        }
+    }
     EAction::NONE
 }
 fn run_subprocess(command: &str) -> EAction {
@@ -104,7 +114,7 @@ fn run_subprocess(command: &str) -> EAction {
     return_value
 }
 
-fn execute_command(command: &str) -> EAction {
+fn execute_command(command: &str, params: Vec<&str>) -> EAction {
     let cmd = String::from(command);
     if cmd.trim().len() == 0 {
         return EAction::NONE;
@@ -112,7 +122,7 @@ fn execute_command(command: &str) -> EAction {
     let return_value = match cmd.trim().as_ref() {
         "quit" => EAction::EXIT,
         "exit" => EAction::EXIT,
-        "ls" => list_directory(),
+        "ls" => list_directory(params),
         _ => run_subprocess(command),
     };
     return_value
@@ -126,19 +136,46 @@ fn main() {
     }
     let prompt = ">>> ";
     print!("💻  Shelly Terminal\n");
+
+    let mut rl = Editor::<()>::new();
+    if rl.load_history(".history").is_err() {
+        println!("No previous history.");
+    }
     loop {
-        let mut input = String::new();
-        print!("\n{}", prompt);
-        stdout().flush().unwrap();
-        stdin().read_line(&mut input).unwrap();
-        let command = input.trim();
-        let out = execute_command(command);
-        match out {
-            EAction::EXIT => {
-                print!("\nGood Bye!\n");
-                exit(0);
+        let readline = rl.readline(prompt);
+        match readline {
+            Ok(line) => {
+                rl.add_history_entry(line.as_str());
+                let mut parts = line.trim().split_whitespace();
+                let command = parts.next().unwrap();
+
+                let args = parts;
+                let params: Vec<&str> = args
+                    .filter( |wd| !wd.starts_with("--") && !wd.starts_with("-") )
+                    .collect()
+                    ;
+                let out = execute_command(command, params);
+                match out {
+                    EAction::EXIT => {
+                        print!("\nGood Bye!\n");
+                        exit(0);
+                    },
+                    _ => (/* Nothing to do... */),
+                }
             },
-            _ => (/* Nothing to do... */),
+            Err(ReadlineError::Interrupted) => {
+                print!("\nGood Bye!\n");
+                break
+            },
+            Err(ReadlineError::Eof) => {
+                print!("\nGood Bye!\n");
+                break
+            },
+            Err(err) => {
+                println!("Error: {:?}", err);
+                break
+            }
         }
     }
+    rl.save_history(".history").unwrap();
 }
