@@ -11,7 +11,11 @@ use std::fs;
 // NON STANDARD
 extern crate prettytable;
 extern crate rustyline;
+extern crate chrono;
+extern crate chrono_humanize;
 
+use chrono::{Duration};
+use chrono_humanize::HumanTime;
 use prettytable::{Table, Row, Cell, Attr, color};
 
 use rustyline::error::ReadlineError;
@@ -54,8 +58,14 @@ fn show_directory_info(directory: &Path) -> EAction {
             let pb: std::path::PathBuf = file.path();
             let meta = pb.metadata().unwrap();
             let meta_filetype = meta.file_type();
-            let created: String = format!("{:?}", meta.created().unwrap().elapsed().unwrap());
-            let modified: String = format!("{:?}", meta.modified().unwrap().elapsed().unwrap());
+            let created: String = format!("{}", {
+                let st = chrono::Local::now() - Duration::from_std(meta.created().unwrap().elapsed().unwrap()).unwrap();
+                HumanTime::from(st)
+            });
+            let modified: String = format!("{}", {
+                let st = chrono::Local::now() - Duration::from_std(meta.modified().unwrap().elapsed().unwrap()).unwrap();
+                HumanTime::from(st)
+            });
             let filetype = if meta_filetype.is_dir() {
                 "directtory"
             } else if meta_filetype.is_symlink() {
